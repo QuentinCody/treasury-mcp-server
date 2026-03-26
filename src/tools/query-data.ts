@@ -6,7 +6,7 @@ interface QueryEnv {
     TREASURY_DATA_DO?: unknown;
 }
 
-export function registerQueryData(server: McpServer, env?: QueryEnv) {
+export function registerQueryData(server: McpServer, env?: QueryEnv): void {
     const handler = createQueryDataHandler("TREASURY_DATA_DO", "treasury");
 
     server.registerTool(

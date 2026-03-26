@@ -1,12 +1,17 @@
 import type { ApiFetchFn } from "@bio-mcp/shared/codemode/catalog";
 import { treasuryFetch } from "./http";
 
+let envProxyUrl: string | undefined;
+
+export function setTreasuryProxyUrl(url: string | undefined): void {
+    envProxyUrl = url;
+}
+
 export function createTreasuryApiFetch(): ApiFetchFn {
     return async (request) => {
         const params = { ...(request.params as Record<string, unknown> || {}) };
 
-        // Paths map directly to Treasury FiscalData endpoints
-        const response = await treasuryFetch(request.path, params);
+        const response = await treasuryFetch(request.path, params, { proxyUrl: envProxyUrl });
 
         if (!response.ok) {
             const errorBody = await response.text().catch(() => response.statusText);
