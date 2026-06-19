@@ -20,6 +20,8 @@ export function registerCodeMode(server: McpServer, env: CodeModeEnv): void {
 
     const executeTool = createExecuteTool({
         prefix: "treasury",
+        // Verifiable provenance: treasury_execute results carry a _meta.citation.
+        source: { id: "treasury", name: "U.S. Treasury Fiscal Data", url: "https://fiscaldata.treasury.gov", license: "U.S. Public Domain" },
         catalog: treasuryCatalog,
         apiFetch,
         doNamespace: env.TREASURY_DATA_DO,
