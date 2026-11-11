@@ -1,11 +1,9 @@
 import { buildHealthResponse, configureCitationSigning } from "@bio-mcp/shared";
-import { StatelessMcpWorker } from "@bio-mcp/shared/mcp";
-import { McpServer } from "@bio-mcp/shared/mcp";
-import { registerQueryData } from "./tools/query-data";
-import { registerGetSchema } from "./tools/get-schema";
-import { registerCodeMode } from "./tools/code-mode";
-import { setTreasuryProxyUrl } from "./lib/api-adapter";
+import { McpServer, StatelessMcpWorker } from "@bio-mcp/shared/mcp";
 import { TreasuryDataDO } from "./do";
+import { registerCodeMode } from "./tools/code-mode";
+import { registerGetSchema } from "./tools/get-schema";
+import { registerQueryData } from "./tools/query-data";
 
 export { TreasuryDataDO };
 
@@ -25,9 +23,6 @@ export class MyMCP extends StatelessMcpWorker {
 
     	configureCitationSigning(this.env);
         const env = this.env as unknown as TreasuryEnv;
-        if (env.TREASURY_PROXY_URL) {
-            setTreasuryProxyUrl(env.TREASURY_PROXY_URL);
-        }
         registerQueryData(this.server, env);
         registerGetSchema(this.server, env);
         registerCodeMode(this.server, env);
@@ -40,6 +35,10 @@ export default {
 
         if (url.pathname === "/health") {
             return buildHealthResponse("treasury");
+        }
+
+        if (url.pathname === "/readyz") {
+            return MyMCP.readiness(env, "treasury");
         }
 
         if (url.pathname === "/mcp") {

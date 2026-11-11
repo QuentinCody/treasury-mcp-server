@@ -4,25 +4,34 @@ export interface TreasuryFetchOptions {
     baseUrl?: string;
     proxyUrl?: string;
     headers?: Record<string, string>;
+    signal?: AbortSignal;
 }
 
 function buildQueryString(params: Record<string, unknown>): string {
-    const parts: string[] = [];
+    const query = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
         if (value === undefined || value === null) continue;
-        // Preserve bracket-notation keys like page[size] without double-encoding
-        parts.push(`${key}=${encodeURIComponent(String(value))}`);
+        query.set(key, String(value));
     }
-    return parts.join("&");
+    return query.toString();
+}
+
+function resourceUrl(base: string, path: string): URL {
+    if (!/^\/v[12]\/[a-z0-9_/]+$/.test(path) || path.includes("//")) {
+        throw new Error("Expected a Fiscal Data /v1/ or /v2/ resource path without query text");
+    }
+    const url = new URL(`${base.replace(/\/$/, "")}${path}`);
+    if (url.protocol !== "https:" || url.username || url.password || url.hash || url.search) {
+        throw new Error("Invalid Treasury base URL");
+    }
+    return url;
 }
 
 /**
  * Fetch from the Treasury FiscalData API.
  *
- * KNOWN ISSUE: api.fiscaldata.treasury.gov's F5 BIG-IP load balancer rejects
- * TLS connections from Cloudflare Worker egress IPs (HTTP 525). This is a
- * network-level block, not a code issue. The API works from non-CF environments.
- * To resolve: set TREASURY_PROXY_URL to a proxy that forwards to the Treasury API.
+ * A previous deployment reported egress failures; current availability is not assumed.
+ * Configured proxies must accept the same relative Fiscal Data paths.
  */
 export async function treasuryFetch(
     path: string,
@@ -30,13 +39,15 @@ export async function treasuryFetch(
     opts?: TreasuryFetchOptions,
 ): Promise<Response> {
     const baseUrl = opts?.proxyUrl ?? opts?.baseUrl ?? TREASURY_BASE;
-    let url = `${baseUrl.replace(/\/$/, "")}${path}`;
+    const url = resourceUrl(baseUrl, path);
     if (params && Object.keys(params).length > 0) {
-        url += `?${buildQueryString(params)}`;
+        url.search = buildQueryString(params);
     }
 
     return fetch(url, {
         method: "GET",
+        signal: opts?.signal,
+        redirect: "manual",
         headers: {
             Accept: "application/json",
             "User-Agent": "Mozilla/5.0 (compatible; treasury-mcp-server/1.0)",
